@@ -1,0 +1,46 @@
+{
+    "general": {
+        "output_base": "recon",
+        "keep_raw": true,
+        "color": true
+    },
+    "virustotal_api_key": "",
+    "archive": {
+        "timeout": 180,
+        "commoncrawl": {
+            "enabled": true,
+            "index": "CC-MAIN-2019-39",
+            "max_pages": 0
+        },
+        "wayback": {
+            "enabled": true
+        },
+        "virustotal_urls": {
+            "enabled": true
+        }
+    },
+    "subdomains": {
+        "crtsh": {
+            "enabled": true
+        },
+        "urlscan": {
+            "enabled": true
+        },
+        "anubis": {
+            "enabled": true
+        },
+        "virustotal": {
+            "enabled": true
+        }
+    },
+    "filter": {
+        "concurrency": 20,
+        "timeout": 10,
+        "match_codes": "200,302",
+        "follow_redirects": false
+    },
+    "rate_limit": {
+        "pagination_wait": 1,
+        "source_delay": 0
+    }
+}
