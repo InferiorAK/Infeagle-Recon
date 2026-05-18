@@ -13,9 +13,12 @@
 [![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InferiorAK/Infeagle-Recon/pulls)
 [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/InferiorAK/Infeagle-Recon/graphs/commit-activity)
 
+[![Views](https://komarev.com/ghpvc/?username=Infeagle-Recon&label=Repository%20Views&color=0e75b6&style=flat)](https://github.com/InferiorAK/Infeagle-Recon)
+[![Stars](https://img.shields.io/github/stars/InferiorAK/Infeagle-Recon?style=flat-square&logo=github)](https://github.com/InferiorAK/Infeagle-Recon)
+[![Forks](https://img.shields.io/github/forks/InferiorAK/Infeagle-Recon?style=flat-square&logo=github)](https://github.com/InferiorAK/Infeagle-Recon)
+
+
 <p align="center">
-    <img src="https://img.shields.io/github/stars/InferiorAK/Infeagle-Recon?style=social" alt="stars">
-    <img src="https://img.shields.io/github/forks/InferiorAK/Infeagle-Recon?style=social" alt="forks">
     <img src="https://img.shields.io/github/repo-size/InferiorAK/Infeagle-Recon" alt="size">
     <img src="https://img.shields.io/github/last-commit/InferiorAK/Infeagle-Recon" alt="last commit">
 </p>
