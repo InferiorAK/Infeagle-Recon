@@ -1,23 +1,4 @@
 #!/usr/bin/env bash
-# ============================================================
-# ██╗███╗   ██╗███████╗███████╗ █████╗  ██████╗ ██╗     ███████╗
-# ██║████╗  ██║██╔════╝██╔════╝██╔══██╗██╔════╝ ██║     ██╔════╝
-# ██║██╔██╗ ██║█████╗  █████╗  ███████║██║  ███╗██║     █████╗  
-# ██║██║╚██╗██║██╔══╝  ██╔══╝  ██╔══██║██║   ██║██║     ██╔══╝  
-# ██║██║ ╚████║██║     ███████╗██║  ██║╚██████╔╝███████╗███████╗
-# ╚═╝╚═╝  ╚═══╝╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝
-#
-#   Infeagle-Recon — Passive Reconnaissance Suite
-#   Author : InferiorAK · github.com/InferiorAK
-#   Version: 2.0
-# ============================================================
-#   Usage:
-#     infeagle.sh full  -d <domain> [options]   Run all phases
-#     infeagle.sh sub   -d <domain> [options]   Subdomain discovery
-#     infeagle.sh live  -f <file> | -u <url>    Live URL filter
-#     infeagle.sh param -d <domain> [options]   Parameter extraction
-# ============================================================
-
 set -euo pipefail
 
 # ======================== PATHS ========================
@@ -29,7 +10,7 @@ RECON_BASE="${SCRIPT_DIR}/recon"
 OUTPUT_BASE="${RECON_BASE}"
 
 # ======================== SOURCE MODULES ========================
-for mod in common urls subfind phases; do
+for mod in common urls subfind phases interesting; do
     [ -f "${PKGS_DIR}/${mod}.sh" ] && source "${PKGS_DIR}/${mod}.sh" || {
         echo "[-] Missing pkgs/${mod}.sh"; exit 1; }
 done
@@ -95,17 +76,36 @@ run_checks() {
 
 summary() {
     $SILENT && return
-    echo ""; echo -e "  ${CO}${BOLD}══════════════════════════════════════════${CN}"
-    echo -e "  ${CO}${BOLD}  Infeagle-Recon Complete: ${CC}${DOMAIN:-.}${CN}"
-    echo -e "  ${CO}${BOLD}══════════════════════════════════════════${CN}"
+    echo ""; echo -e "  ${CO}┌────────────────────────────────────────────${CN}"
+    echo -e "  ${CC}│${CN}  ${CO}${BOLD}Infeagle-Recon Complete:${CN} ${CG}${DOMAIN:-.}${CN}"
+    echo -e "  ${CO}├────────────────────────────────────────────${CN}"
     local f label path
     for entry in "subdomains.txt:Subdomains" "urls.txt:URLs Harvested" "live.txt:Live Endpoints" "params.txt:Parameters"; do
         f="${entry%%:*}"; label="${entry##*:}"; path="${OUTDIR}/${f}"
-        [ -f "$path" ] && echo -e "  ${CC}${label}:${CN} ${CG}$(wc -l < "$path")${CN}"
+        [ -f "$path" ] && echo -e "  ${CC}│${CN}  ${CC}${label}:${CN} ${CG}$(wc -l < "$path")${CN}"
     done
-    echo -e "  ${CO}${BOLD}──────────────────────────────────────────${CN}"
-    echo -e "  ${CC}Output:${CN} ${CY}${OUTDIR}${CN}"
-    echo -e "  ${CO}${BOLD}══════════════════════════════════════════${CN}"; echo ""
+    local ifile="${OUTDIR}/interesting.txt"
+    if [ -f "$ifile" ] && [ -s "$ifile" ]; then
+        echo -e "  ${CO}├────────────────────────────────────────────${CN}"
+        local total=0 name cnt
+        while IFS= read -r line; do
+            name=$(echo "$line" | sed 's/^  ┌─ //;s/ ([0-9]*) .*$//')
+            cnt=$(echo "$line" | grep -o '([0-9]*)' | tr -d '()')
+            [ -n "$cnt" ] && echo -e "  ${CC}│${CN}  ${CC}${name}:${CN} ${CG}${cnt}${CN}" && total=$((total + cnt))
+        done < <(grep "^  ┌─ " "$ifile")
+        while IFS= read -r name; do
+            [ "$name" = "Interesting Endpoints" ] && continue
+            cnt=$(grep -A1 "^--- ${name} ---" "$ifile" | grep "Count" | grep -o '[0-9][0-9]*$')
+            cnt=${cnt:-0}
+            [ "$cnt" -gt 0 ] 2>/dev/null || continue
+            echo -e "  ${CC}│${CN}  ${CC}${name}:${CN} ${CG}${cnt}${CN}"
+            total=$((total + cnt))
+        done < <(grep "^--- " "$ifile" | sed 's/^--- //;s/ ---$//')
+        echo -e "  ${CC}│${CN}  ${CO}${BOLD}Interesting Total:${CN} ${CG}${total}${CN}"
+    fi
+    echo -e "  ${CO}├────────────────────────────────────────────${CN}"
+    echo -e "  ${CC}│${CN}  ${CC}Output:${CN} ${CY}${OUTDIR}${CN}"
+    echo -e "  ${CO}└────────────────────────────────────────────${CN}"; echo ""
 }
 
 # ======================== GLOBAL HELP ========================
@@ -116,10 +116,12 @@ global_help() {
     echo -e "Usage: ${BOLD}$(basename "$0")${CN} ${CC}<command>${CN} [options]"
     echo ""
     echo -e "${CY}Commands:${CN}"
-    echo -e "  ${BOLD}full${CN}   Run all phases (URLs → subdomains → live → params)"
-    echo -e "  ${BOLD}sub${CN}    Subdomain discovery (from URLs + dedicated sources)"
-    echo -e "  ${BOLD}live${CN}   Live URL filter with probe"
-    echo -e "  ${BOLD}param${CN}  Parameter extraction from live URLs"
+    echo -e "  ${BOLD}urls${CN}         URL harvesting phase only (from archives)"
+    echo -e "  ${BOLD}full${CN}         Run all phases"
+    echo -e "  ${BOLD}sub${CN}          Subdomain discovery"
+    echo -e "  ${BOLD}live${CN}         Live URL filter with probe"
+    echo -e "  ${BOLD}param${CN}        Parameter extraction"
+    echo -e "  ${BOLD}inter${CN}        Filter interesting endpoints/assets/tokens"
     echo ""
     echo -e "${CY}Global flags:${CN}"
     echo -e "  ${BOLD}-d${CN} ${CC}<domain>${CN}   Target domain"
@@ -135,10 +137,37 @@ global_help() {
     exit 0
 }
 
+# ======================== COMMAND: URLS ========================
+help_urls() {
+    echo -e "${CO}Infeagle-Recon${CN} — ${BOLD}urls${CN}"
+    echo "URL harvesting phase only — collect URLs from archives"
+    echo ""
+    echo -e "Usage: ${BOLD}$(basename "$0") urls${CN} ${CC}-d <domain>${CN} [options]"
+    echo ""
+    echo -e "${CY}Options:${CN}"
+    echo -e "  ${BOLD}-d${CN} ${CC}<domain>${CN}   Target domain ${CR}(required)${CN}"
+    echo -e "  ${BOLD}-o${CN} ${CC}<dir>${CN}      Output directory"
+    echo -e "  ${BOLD}-q${CN},${BOLD}--silent${CN}  Suppress banner"
+    exit 0
+}
+
+cmd_urls() {
+    load_config "$CONF_FILE"
+    local _r=0
+    parse_shared "$@" || _r=$?
+    if [ "$_r" -eq 2 ]; then help_urls; fi
+    if [ "$_r" -eq 1 ]; then log err "Unknown option for urls"; help_urls; fi
+    [ -z "$DOMAIN" ] && { log err "Domain required (-d)"; help_urls; }
+    run_checks
+    show_banner
+    phase_urls
+    summary
+}
+
 # ======================== COMMAND: FULL ========================
 help_full() {
     echo -e "${CO}Infeagle-Recon${CN} — ${BOLD}full${CN}"
-    echo "Run all phases: URL harvest → subdomain discovery → live filter → params"
+    echo "Run all phases: URL harvest → subdomain discovery → live filter → params → inter"
     echo ""
     echo -e "Usage: ${BOLD}$(basename "$0") full${CN} ${CC}-d <domain>${CN} [options]"
     echo ""
@@ -165,6 +194,7 @@ cmd_full() {
     find_subdomains "$DOMAIN" "$OUTDIR" "${OUTDIR}/urls.txt"
     phase_live true
     phase_params
+    phase_interesting "$OUTDIR"
     summary
 }
 
@@ -275,6 +305,61 @@ cmd_param() {
     summary
 }
 
+# ======================== COMMAND: INTERESTING ========================
+help_inter() {
+    echo -e "${CO}Infeagle-Recon${CN} — ${BOLD}inter${CN}"
+    echo "Filter interesting endpoints, assets, tokens, and credentials from existing outputs."
+    echo "Scans urls.txt, subdomains.txt, live.txt, and params.txt in the output directory."
+    echo ""
+    echo -e "${CY}Note:${CN} Run other phases (${BOLD}full${CN}, ${BOLD}urls${CN}, ${BOLD}sub${CN}, ${BOLD}live${CN}) first to generate the input files."
+    echo ""
+    echo -e "Usage: ${BOLD}$(basename "$0") inter${CN} ${CC}-d <domain>${CN} [options]"
+    echo ""
+    echo -e "${CY}Options:${CN}"
+    echo -e "  ${BOLD}-d${CN} ${CC}<domain>${CN}   Target domain ${CR}(required)${CN}"
+    echo -e "  ${BOLD}-o${CN} ${CC}<dir>${CN}      Output directory"
+    echo -e "  ${BOLD}-q${CN},${BOLD}--silent${CN}  Suppress banner"
+    exit 0
+}
+
+cmd_interesting() {
+    load_config "$CONF_FILE"
+    local _r=0
+    parse_shared "$@" || _r=$?
+    if [ "$_r" -eq 2 ]; then help_inter; fi
+    if [ "$_r" -eq 1 ]; then log err "Unknown option for inter"; help_inter; fi
+    [ -z "$DOMAIN" ] && { log err "Domain required (-d)"; help_inter; }
+    run_checks
+    show_banner
+    phase_interesting "$OUTDIR"
+    $SILENT && return
+    local ifile="${OUTDIR}/interesting.txt"
+    if [ -f "$ifile" ] && [ -s "$ifile" ]; then
+        echo ""
+        echo -e "  ${CO}┌────────────────────────────────────────────${CN}"
+        echo -e "  ${CC}│${CN}  ${CO}${BOLD}Interesting Complete:${CN} ${CG}${DOMAIN}${CN}"
+        echo -e "  ${CO}├────────────────────────────────────────────${CN}"
+        local total=0 name cnt
+        while IFS= read -r line; do
+            name=$(echo "$line" | sed 's/^  ┌─ //;s/ ([0-9]*) .*$//')
+            cnt=$(echo "$line" | grep -o '([0-9]*)' | tr -d '()')
+            [ -n "$cnt" ] && echo -e "  ${CC}│${CN}  ${CC}${name}:${CN} ${CG}${cnt}${CN}" && total=$((total + cnt))
+        done < <(grep "^  ┌─ " "$ifile")
+        while IFS= read -r name; do
+            [ "$name" = "Interesting Endpoints" ] && continue
+            cnt=$(grep -A1 "^--- ${name} ---" "$ifile" | grep "Count" | grep -o '[0-9][0-9]*$')
+            cnt=${cnt:-0}
+            [ "$cnt" -gt 0 ] 2>/dev/null || continue
+            echo -e "  ${CC}│${CN}  ${CC}${name}:${CN} ${CG}${cnt}${CN}"
+            total=$((total + cnt))
+        done < <(grep "^--- " "$ifile" | sed 's/^--- //;s/ ---$//')
+        echo -e "  ${CO}├────────────────────────────────────────────${CN}"
+        echo -e "  ${CC}│${CN}  ${CO}${BOLD}Total Findings:${CN} ${CG}${total}${CN}"
+        echo -e "  ${CO}└────────────────────────────────────────────${CN}"
+        echo ""
+    fi
+}
+
 # ======================== MAIN DISPATCH ========================
 main() {
     [ $# -eq 0 ] && global_help
@@ -285,6 +370,8 @@ main() {
         sub|--sub)    cmd_sub "$@" ;;
         live|--live)  cmd_live "$@" ;;
         param|--param) cmd_param "$@" ;;
+        urls|--urls)  cmd_urls "$@" ;;
+        inter|--inter|interesting|--interesting) cmd_interesting "$@" ;;
         -h|--help|help) global_help ;;
         -d) # if -d is first arg, default to full
             set -- "$cmd" "$@"
