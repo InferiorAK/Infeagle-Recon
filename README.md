@@ -45,6 +45,16 @@
 
 ---
 
+## What's New in v1.1
+
+- **New `inter` command** — Categorize interesting findings across 12 categories (admin panels, API endpoints, auth pages, tokens, etc.)
+- **Noise pre-filter** — Static assets (images, fonts, media) stripped before categorization for cleaner results
+- **Smarter pattern matching** — Boundary-aware regexes reduce false positives from job listings, image paths, and tracking params
+- **Unified box formatting** — All sections use consistent `┌─` headers with 4-space indented items
+- **Better temp cleanup** — Intermediate files properly removed after each run
+
+---
+
 ## Features
 
 | # | Phase | Description |
@@ -53,6 +63,7 @@
 | 2 | **Subdomain Discovery** | Find subdomains via crt.sh, URLScan.io, AnubisDB, VirusTotal, and URL host extraction |
 | 3 | **Live Filtering** | Async HTTP probe with aiohttp — checks reachability and status codes |
 | 4 | **Parameter Extraction** | Extract URL query parameters from live endpoints |
+| 5 | **Interesting Findings** | Categorize actionable endpoints (admin, API, auth, debug, etc.), extract tokens, credentials, emails, and flag interesting subdomains |
 
 ### Why Infeagle?
 
@@ -96,10 +107,12 @@ Author: InferiorAK
 Usage: infeagle.sh <command> [options]
 
 Commands:
-  full   Run all phases (URLs → subdomains → live → params)
+  urls   URL harvesting phase only (from archives)
+  full   Run all phases (URLs → subdomains → live → params → inter)
   sub    Subdomain discovery (from URLs + dedicated sources)
   live   Live URL filter with probe
   param  Parameter extraction from live URLs
+  inter  Categorize interesting endpoints, tokens, subdomains, and params (reads from recon/&lt;domain&gt;/)
 
 Global flags:
   -d <domain>   Target domain
@@ -112,6 +125,14 @@ Global flags:
 Run infeagle.sh <command> --help for command-specific options
 
 Config:  Edit conf.json for VirusTotal API key and defaults
+```
+
+### URL Harvesting
+
+```bash
+./infeagle.sh urls -d example.com
+./infeagle.sh urls -d example.com -o ~/results/example
+./infeagle.sh urls -d example.com -q
 ```
 
 ### Full Pipeline
@@ -147,6 +168,16 @@ Config:  Edit conf.json for VirusTotal API key and defaults
 ./infeagle.sh param -d example.com -q
 ```
 
+### Interesting Findings
+
+```bash
+./infeagle.sh inter -d example.com                   # reads from recon/example.com/
+./infeagle.sh inter -d example.com -o ~/results      # reads recon/example.com/, outputs to ~/results/
+./infeagle.sh inter -d example.com -q                # silent (no banner)
+```
+
+`-d` points to the `recon/<domain>/` directory containing existing phase outputs (urls.txt, live.txt, subdomains.txt, params.txt). No network requests are made by this phase.
+
 ---
 
 ## Screenshots
@@ -155,17 +186,23 @@ Config:  Edit conf.json for VirusTotal API key and defaults
 
 ![Full Mode](assets/1.%20full_mode.png)
 
-*Full pipeline execution — URL harvest, subdomain discovery, live filtering and parameter extraction.*
+*Full pipeline execution — URL harvest, subdomain discovery, live filtering, parameter extraction and interesting findings.*
+
+#### Interesting Endpoints
+
+![Interesting Findings](assets/2.%20enhanched_result.png)
+
+*Categorized interesting endpoints with admin panels, API endpoints, auth pages, dev/debug, info disclosure, and more.*
 
 #### Scanned Live URLs
 
-![Live URLs](assets/2.%20live_urls.png)
+![Live URLs](assets/3.%20live_urls.png)
 
 *Some fetched live endpoints*
 
 #### XSS found just from Recon
 
-![XSS Popup](assets/3.%20xss_popup.png)
+![XSS Popup](assets/4.%20xss_popup.png)
 
 *XSS popup triggered from a live grabbed endpoint discovered by Infeagle.*
 
@@ -179,14 +216,15 @@ Edit `conf.json` to customize behavior:
 {
     "general": {
         "output_base": "recon",
-        "keep_raw": true
+        "keep_raw": true,
+        "color": true
     },
-    "virustotal_api_key": "your-key-here",
+    "virustotal_api_key": "",
     "archive": {
         "timeout": 180,
         "commoncrawl": {
             "enabled": true,
-            "index": "latest",
+            "index": "CC-MAIN-2019-39",
             "max_pages": 0
         },
         "wayback": {
@@ -247,6 +285,7 @@ recon/<domain>/
 ├── subdomains.txt            # Discovered subdomains
 ├── live.txt                  # Live (responding) URLs
 ├── params.txt                # URLs with query parameters
+├── interesting.txt           # Categorized interesting endpoints
 └── .raw/                     # Intermediate per-source results (if keep_raw=true)
     ├── commoncrawl_domain.txt
     ├── commoncrawl_wild.txt
@@ -295,6 +334,25 @@ Async HTTP probe using `aiohttp` with semaphore-based concurrency control. For e
 
 Simple `grep`-based extraction of query parameters (`?key=val&...`) from live URLs.
 
+### Interesting Findings
+
+Scans harvested and live URLs for bug-bounty–relevant patterns across 12 categories:
+
+- **Admin Panels** — admin panels, dashboards, consoles
+- **Auth / Login Pages** — login, OAuth, SSO, 2FA, password reset
+- **API Endpoints** — GraphQL, Swagger, REST, versioned APIs
+- **Sensitive Files** — `.env`, `.git`, credentials, database dumps
+- **Dev / Debug** — staging, beta, sandbox, environments, heaps
+- **DevOps / Enterprise** — Jenkins, Jira, Grafana, Kibana
+- **CMS** — WordPress, Joomla, Drupal, Magento
+- **Cloud / Storage** — S3, GCS, Azure, uploads
+- **Redirect / SSRF** — open redirects, webhooks, proxies
+- **WebSockets** — WebSocket and SSE endpoints
+- **File Operations** — file managers, download scripts
+- **Info Disclosure** — `robots.txt`, `.well-known/`, sitemaps
+
+A noise pre-filter strips static assets (images, fonts, media) before categorization. Also extracts tokens/credentials in URL params, email addresses, and interesting subdomains (e.g., `api.*`, `admin.*`, `jenkins.*`).
+
 ---
 
 ## Examples
@@ -309,11 +367,15 @@ Simple `grep`-based extraction of query parameters (`?key=val&...`) from live UR
 # Probe a list of URLs with custom settings
 ./infeagle.sh live -f urls.txt -c 100 -t 3 --mc 200,301 -q
 
+# Save live URLs to a custom directory
+./infeagle.sh live -f urls.txt -q -o results/example
+
 # Extract params from previously gathered live endpoints
 ./infeagle.sh param -f recon/example/live.txt
 
-# Pipe live URLs into another tool (silent mode)
-./infeagle.sh live -f urls.txt -q | httpx -silent
+# Categorize interesting endpoints (reads recon/&lt;domain&gt;/ — no network requests)
+./infeagle.sh inter -d example.com
+./infeagle.sh inter -d example.com -o ~/results/example
 ```
 
 ---
@@ -325,7 +387,8 @@ infeagle.sh              # Entry point — subcommand dispatcher
 ├── pkgs/common.sh       # Colors, logging, config loader, banner
 ├── pkgs/urls.sh         # CommonCrawl, Wayback, VirusTotal URL fetchers
 ├── pkgs/subfind.sh      # crt.sh, URLScan, Anubis, VirusTotal subdomain fetchers
-├── pkgs/phases.sh       # Phase orchestration (URLs → subs → live → params)
+├── pkgs/phases.sh       # Phase orchestration (URLs → subs → live → params → inter)
+├── pkgs/interesting.sh  # Endpoint categorization, token/credential extraction
 ├── pkgs/filter_live.py  # Async HTTP live probe (aiohttp)
 └── conf.json            # User configuration
 ```
