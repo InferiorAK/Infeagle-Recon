@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# ============================================================
-#  subfind.sh — Subdomain Discovery Functions
-# ============================================================
 
 fetch_crtsh() {
     local domain="$1" out="$2"

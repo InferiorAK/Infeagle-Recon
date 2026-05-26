@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# ============================================================
-#  urls.sh — URL Harvesting Functions
-# ============================================================
 
 get_latest_cc_index() {
     if [ "$CC_INDEX" != "latest" ]; then
@@ -101,25 +98,20 @@ harvest_urls() {
 
     #--- Wayback Machine ---
     if [ "$WB_ENABLED" = true ]; then
-        local wb_wild="${raw_dir}/wayback_wild.txt"
-        fetch_wayback "*.${domain}/*" "$wb_wild"
-        if [ -s "$wb_wild" ]; then cat "$wb_wild" >> "$all_urls"
-            silent_log ok "Wayback (*.${domain}): $(wc -l < "$wb_wild") URLs"
-        else silent_log warn "Wayback (*.${domain}): no URLs"; fi
-
         local wb_domain="${raw_dir}/wayback_domain.txt"
         fetch_wayback "${domain}/*" "$wb_domain"
         if [ -s "$wb_domain" ]; then cat "$wb_domain" >> "$all_urls"
             silent_log ok "Wayback (${domain}): $(wc -l < "$wb_domain") URLs"
         else silent_log warn "Wayback (${domain}): no URLs"; fi
 
-        local wb_broad="${raw_dir}/wayback_broad.txt"
-        fetch_wayback "*${domain}/*" "$wb_broad"
-        if [ -s "$wb_broad" ]; then cat "$wb_broad" >> "$all_urls"
-            silent_log ok "Wayback (*${domain}): $(wc -l < "$wb_broad") URLs"
-        else silent_log warn "Wayback (*${domain}): no URLs"; fi
+        local wb_wild="${raw_dir}/wayback_wild.txt"
+        fetch_wayback "*.${domain}/*" "$wb_wild"
+        if [ -s "$wb_wild" ]; then cat "$wb_wild" >> "$all_urls"
+            silent_log ok "Wayback (*.${domain}): $(wc -l < "$wb_wild") URLs"
+        else silent_log warn "Wayback (*.${domain}): no URLs"; fi
+
     else
-        silent_log info "Wayback: disabled in config"
+        silent_log warn "Wayback: disabled in config"
     fi
 
     #--- VirusTotal URLs ---

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# ============================================================
-#  common.sh — Colors, Logging, Config, Helpers
-# ============================================================
+
+# --- Clean exit on Ctrl+C ---
+_STTY_SAVE=$(stty -g 2>/dev/null || true)
+trap 'stty "$_STTY_SAVE" 2>/dev/null || true; echo -e "\n  ${CR}[-]${CN} Aborted by user"; exit 1' INT
 
 # --- Colors ---
 CO="\033[38;5;208m"
@@ -21,7 +22,7 @@ log() {
         ok)    echo -e "  ${CG}[+]${CN} $*" ;;
         warn)  echo -e "  ${CY}[!]${CN} $*" ;;
         err)   echo -e "  ${CR}[-]${CN} $*" ;;
-        phase) echo -e "\n  ${CO}${BOLD}▸ $*${CN}" ;;
+        phase) echo -e "\n  ${CO}── $*${CN}" ;;
     esac
 }
 
@@ -107,18 +108,23 @@ check_deps() {
 }
 
 # --- Banner ---
-BANNER="${CO}
+BANNER="${CO}┌───────────────────────────────────────────────────────────────────────┐${CN}
+${CC}│${CN}                                                                       ${CC}│${CN}
+${CC}│${CN}  ${CO}  ██╗███╗   ██╗███████╗███████╗ █████╗  ██████╗ ██╗     ███████╗     ${CN}${CC}│${CN}
+${CC}│${CN}  ${CO}  ██║████╗  ██║██╔════╝██╔════╝██╔══██╗██╔════╝ ██║     ██╔════╝     ${CN}${CC}│${CN}
+${CC}│${CN}  ${CO}  ██║██╔██╗ ██║█████╗  █████╗  ███████║██║  ███╗██║     █████╗       ${CN}${CC}│${CN}
+${CC}│${CN}  ${CO}  ██║██║╚██╗██║██╔══╝  ██╔══╝  ██╔══██║██║   ██║██║     ██╔══╝       ${CN}${CC}│${CN}
+${CC}│${CN}  ${CO}  ██║██║ ╚████║██║     ███████╗██║  ██║╚██████╔╝███████╗███████╗     ${CN}${CC}│${CN}
+${CC}│${CN}  ${CO}  ╚═╝╚═╝  ╚═══╝╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝     ${CN}${CC}│${CN}
+${CC}│${CN}                                                                       ${CC}│${CN}
+${CC}│${CN}    ${CO}Infeagle-Recon${CN}  —  ${CG}v1.1                                            ${CC}│${CN}
+${CC}│${CN}    ${CG}Passive Reconnaissance Suite${CN}                                       ${CC}│${CN}
+${CC}│${CN}                                                                       ${CC}│${CN}
+${CC}│${CN}    ${CO}Author${CN}   InferiorAK                                                ${CC}│${CN}
+${CC}│${CN}    ${CO}GitHub${CN}   github.com/InferiorAK                                     ${CC}│${CN}
+${CC}│${CN}    ${CO}Web${CN}      inferiorak.integratedhawkers.com                          ${CC}│${CN}
+${CC}│${CN}                                                                       ${CC}│${CN}
+${CC}│${CN}    ${CO}Phases${CN}   URLs → Subdomains → Live → Params → Interesting           ${CC}│${CN}
+${CC}│${CN}                                                                       ${CC}│${CN}
+${CO}└───────────────────────────────────────────────────────────────────────┘${CN}"
 
-██╗███╗   ██╗███████╗███████╗ █████╗  ██████╗ ██╗     ███████╗
-██║████╗  ██║██╔════╝██╔════╝██╔══██╗██╔════╝ ██║     ██╔════╝
-██║██╔██╗ ██║█████╗  █████╗  ███████║██║  ███╗██║     █████╗  
-██║██║╚██╗██║██╔══╝  ██╔══╝  ██╔══██║██║   ██║██║     ██╔══╝  
-██║██║ ╚████║██║     ███████╗██║  ██║╚██████╔╝███████╗███████╗
-╚═╝╚═╝  ╚═══╝╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝
-
-${CN}
-${CO}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CN}
-${CC}Tool${CN}    Infeagle-Recon — Passive Reconnaissance Suite
-${CC}Author${CN}  InferiorAK · github.com/InferiorAK
-${CC}Phases${CN}  URLs → Subdomains → Live Filter → Params
-${CO}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CN}"

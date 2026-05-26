@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# ============================================================
-#  phases.sh — Phase Orchestration
-# ============================================================
 
 phase_urls() {
     harvest_urls "$DOMAIN" "$OUTDIR"
@@ -22,8 +19,8 @@ phase_live() {
     local live_file="${OUTDIR}/live.txt"
 
     if [ ! -s "$url_file" ]; then
-        log err "No URLs to check. Provide input via -f/--file, -u/--url, or run URL harvest first."
-        exit 1
+        log warn "No URLs to check — skipping live filter"
+        return
     fi
 
     log phase "Phase 3: Live URL Filtering"
@@ -39,8 +36,8 @@ phase_params() {
     local params_file="${OUTDIR}/params.txt"
 
     if [ ! -s "$live_file" ]; then
-        log err "No live URLs found. Run live filter first."
-        exit 1
+        log warn "No live URLs found — skipping param extraction"
+        return
     fi
 
     log phase "Phase 4: Parameter Extraction"
@@ -56,9 +53,15 @@ phase_params() {
     fi
 }
 
+phase_interesting_wrapper() {
+    log phase "Phase 5: Interesting Endpoint Filtering"
+    phase_interesting "$OUTDIR"
+}
+
 phase_all() {
     phase_urls
     phase_subdomains
     phase_live true
     phase_params
+    phase_interesting_wrapper
 }
